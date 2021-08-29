@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { Container } from 'reactstrap'
 import Web3 from 'web3'
+import { bufferToHex } from 'ethereumjs-util'
+import { encrypt } from 'eth-sig-util'
 
 // Contracts
 import Config from '../contracts/config.json'
@@ -26,6 +28,11 @@ export default function SecretKeeperDapp({ network }) {
 	// Utility
 	const [alert, setAlert] = React.useState(null)
 
+	// Initialize blockchain
+	useEffect(() => {
+		if (window.ethereum) loadBlockchainData(network)
+	}, [network])
+
 	// Watch for web3 events
 	useEffect(() => {
 		// Check if metamask is setup
@@ -42,8 +49,61 @@ export default function SecretKeeperDapp({ network }) {
 
 		web3.eth.getAccounts().then((accounts) => {
 			console.log(accounts[0])
+
+			// Get public key
+			let encryptionPublicKey
+			window.ethereum
+				.request({
+					method: 'eth_getEncryptionPublicKey',
+					params: [accounts[0]], // you must have access to the specified account
+				})
+				.then((result) => {
+					encryptionPublicKey = result
+					const encryptedMessage = bufferToHex(
+						Buffer.from(
+							JSON.stringify(
+								encrypt(
+									encryptionPublicKey,
+									{ data: 'Hello world!' },
+									'x25519-xsalsa20-poly1305'
+								)
+							),
+							'utf8'
+						)
+					)
+					console.log(encryptedMessage)
+					decryptMessage(encryptedMessage, accounts[0]).then(
+						(decryptedMessage) => console.log(decryptMessage)
+					)
+				})
+				.catch((error) => {
+					if (error.code === 4001) {
+						// EIP-1193 userRejectedRequest error
+						console.log("We can't encrypt anything without the key.")
+					} else {
+						console.error(error)
+					}
+				})
 		})
 	})
+
+	async function loadBlockchainData(network) {
+		await window.ethereum.request({ method: 'eth_requestAccounts' })
+		window.ethereum.autoRefreshOnNetworkChange = false
+	}
+
+	async function decryptMessage(encryptedMessage, account) {
+		try {
+			const decryptedMessage = await window.ethereum.request({
+				method: 'eth_decrypt',
+				params: [encryptedMessage, account],
+			})
+			console.log('The decrypted message is:', decryptedMessage)
+			return decryptMessage
+		} catch (error) {
+			console.log(error.message)
+		}
+	}
 
 	function displayAlert(message, type) {
 		const successTitles = ['Nice!', 'Awesome!', 'Good Job!']
