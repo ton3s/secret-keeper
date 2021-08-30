@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Container } from 'reactstrap'
+import { Container, Button } from 'reactstrap'
 import Web3 from 'web3'
 import { bufferToHex } from 'ethereumjs-util'
 import { encrypt } from 'eth-sig-util'
@@ -25,6 +25,7 @@ const styles = {
 export default function SecretKeeperDapp({ network }) {
 	// Models
 	const [secrets, setSecrets] = useState([])
+	const [account, setAccount] = useState()
 
 	// Contract
 	const [web3, setWeb3] = useState(
@@ -50,11 +51,11 @@ export default function SecretKeeperDapp({ network }) {
 		}
 		// Check if the user changes accounts
 		window.ethereum.on('accountsChanged', (accounts) => {
-			console.log(accounts[0])
+			setAccount(accounts[0])
 		})
 
 		web3.eth.getAccounts().then((accounts) => {
-			console.log(accounts[0])
+			setAccount(accounts[0])
 		})
 	})
 
@@ -63,7 +64,36 @@ export default function SecretKeeperDapp({ network }) {
 		window.ethereum.autoRefreshOnNetworkChange = false
 	}
 
-	async function encryptMessage(message, account) {
+	async function handleEncryptMessage(id, title, message) {
+		try {
+			const encryptedMessage = await encryptMessage(message)
+			setSecrets([
+				...secrets,
+				{ id, title, message: encryptedMessage, account },
+			])
+			displayAlert(`Secret has been successfully encrypted`, 'Success')
+			return encryptedMessage
+		} catch (error) {
+			displayAlert(error, 'Error')
+		}
+	}
+
+	async function handleDecryptMessage(id) {
+		try {
+			const secret = secrets.filter((secret) => secret.id === id)
+			if (secret.length) {
+				const decryptedMessage = await decryptMessage(secret[0].message)
+				displayAlert(`Decrypted message is '${decryptedMessage}'`, 'Success')
+				return decryptedMessage
+			} else {
+				displayAlert(`Secret with that id does not exist`, 'Error')
+			}
+		} catch (error) {
+			displayAlert(error, 'Error')
+		}
+	}
+
+	async function encryptMessage(message) {
 		try {
 			// Request access to public key
 			const encryptionPublicKey = await window.ethereum.request({
@@ -89,23 +119,22 @@ export default function SecretKeeperDapp({ network }) {
 		} catch (error) {
 			if (error.code === 4001) {
 				// EIP-1193 userRejectedRequest error
-				console.log("We can't encrypt anything without the key.")
+				throw "We can't encrypt anything without the key."
 			} else {
-				console.error(error)
+				throw error
 			}
 		}
 	}
 
-	async function decryptMessage(encryptedMessage, account) {
+	async function decryptMessage(encryptedMessage) {
 		try {
 			const decryptedMessage = await window.ethereum.request({
 				method: 'eth_decrypt',
 				params: [encryptedMessage, account],
 			})
-			console.log('The decrypted message is:', decryptedMessage)
-			return decryptMessage
+			return decryptedMessage
 		} catch (error) {
-			console.log(error.message)
+			throw error.message
 		}
 	}
 
@@ -154,8 +183,20 @@ export default function SecretKeeperDapp({ network }) {
 
 	return (
 		<React.Fragment>
-			<SecretNavbar />
-			<Container className='tim-container'>{alert}</Container>
+			<SecretNavbar handleEncryptMessage={handleEncryptMessage} />
+			<Container className='tim-container'>
+				{alert}
+				<Button
+					color='warning'
+					onClick={() =>
+						handleEncryptMessage(1, 'Encrypt this', 'This should be encrypted!')
+					}>
+					Encrypt
+				</Button>
+				<Button color='success' onClick={() => handleDecryptMessage(1)}>
+					Decrypt
+				</Button>
+			</Container>
 		</React.Fragment>
 	)
 }

@@ -37,7 +37,7 @@ const styles = {
 	},
 }
 
-export default function SecretNavbar() {
+export default function SecretNavbar({ handleEncryptMessage }) {
 	const [isOpen, setIsOpen] = useState(false)
 
 	return (
