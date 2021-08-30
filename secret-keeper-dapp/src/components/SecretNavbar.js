@@ -32,19 +32,28 @@ const styles = {
 	nav: {
 		padding: '0px 0px',
 	},
+	dot: {
+		background: 'white',
+	},
 }
 
 export default function SecretNavbar() {
 	const [isOpen, setIsOpen] = useState(false)
 
 	return (
-		<Navbar expand='lg' color='primary'>
+		<Navbar expand='lg' color='info'>
 			<Container>
 				<NavbarBrand style={styles.title}>Secret Keeper</NavbarBrand>
 				<NavbarToggler onClick={() => setIsOpen(!isOpen)}>
-					<span className='navbar-toggler-bar navbar-kebab'></span>
-					<span className='navbar-toggler-bar navbar-kebab'></span>
-					<span className='navbar-toggler-bar navbar-kebab'></span>
+					<span
+						style={styles.dot}
+						className='navbar-toggler-bar navbar-kebab'></span>
+					<span
+						style={styles.dot}
+						className='navbar-toggler-bar navbar-kebab'></span>
+					<span
+						style={styles.dot}
+						className='navbar-toggler-bar navbar-kebab'></span>
 				</NavbarToggler>
 				<Collapse isOpen={isOpen} navbar>
 					<Form inline className='ml-auto'>

@@ -23,6 +23,9 @@ const styles = {
 }
 
 export default function SecretKeeperDapp({ network }) {
+	// Models
+	const [secrets, setSecrets] = useState([])
+
 	// Contract
 	const [web3, setWeb3] = useState(
 		new Web3(Web3.givenProvider || Config[network].url)
@@ -81,10 +84,9 @@ export default function SecretKeeperDapp({ network }) {
 					'utf8'
 				)
 			)
-
 			// Return encrypted message
 			return encryptedMessage
-		} catch (err) {
+		} catch (error) {
 			if (error.code === 4001) {
 				// EIP-1193 userRejectedRequest error
 				console.log("We can't encrypt anything without the key.")
